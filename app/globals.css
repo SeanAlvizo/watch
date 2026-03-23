@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface-bright: #faf9f8;
+  --color-on-tertiary-fixed: #241a00;
+  --color-primary-fixed-dim: #c8c6c5;
+  --color-surface-dim: #dadad9;
+  --color-on-secondary-fixed: #181c20;
+  --color-inverse-on-surface: #f1f0f0;
+  --color-on-surface: #1a1c1c;
+  --color-surface: #faf9f8;
+  --color-primary: #000000;
+  --color-tertiary-fixed-dim: #e9c349;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #4f3e00;
+  --color-on-primary: #ffffff;
+  --color-secondary-fixed: #e0e2e8;
+  --color-on-error-container: #93000a;
+  --color-secondary: #5b5f63;
+  --color-outline: #747878;
+  --color-error: #ba1a1a;
+  --color-background: #faf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-primary-container: #1c1b1b;
+  --color-tertiary-fixed: #ffe088;
+  --color-surface-container-highest: #e3e2e1;
+  --color-secondary-container: #e0e2e8;
+  --color-on-secondary: #ffffff;
+  --color-on-tertiary-fixed-variant: #574500;
+  --color-on-secondary-container: #616569;
+  --color-surface-container-high: #e9e8e7;
+  --color-on-primary-fixed: #1c1b1b;
+  --color-tertiary-container: #cca730;
+  --color-inverse-primary: #c8c6c5;
+  --color-on-surface-variant: #444748;
+  --color-inverse-surface: #2f3130;
+  --color-tertiary: #735c00;
+  --color-secondary-fixed-dim: #c4c6cc;
+  --color-surface-container: #eeeeed;
+  --color-on-primary-fixed-variant: #474746;
+  --color-on-background: #1a1c1c;
+  --color-on-primary-container: #858383;
+  --color-primary-fixed: #e5e2e1;
+  --color-error-container: #ffdad6;
+  --color-surface-variant: #e3e2e1;
+  --color-surface-tint: #5f5e5e;
+  --color-surface-container-low: #f4f3f2;
+  --color-outline-variant: #c4c7c7;
+  --color-on-error: #ffffff;
+  --color-on-secondary-fixed-variant: #44474b;
+
+  --font-headline: var(--font-noto-serif), serif;
+  --font-body: var(--font-manrope), sans-serif;
+  --font-label: var(--font-manrope), sans-serif;
+  --font-noto-serif: var(--font-noto-serif), serif;
+  --font-manrope: var(--font-manrope), sans-serif;
+
+  --radius-DEFAULT: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 1;
+}
+
+@utility material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+@utility glass-nav {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@utility serif-tight {
+  font-family: var(--font-noto-serif), serif;
+  letter-spacing: -0.02em;
+}
+
+@utility label-engraved {
+  font-family: var(--font-manrope), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  font-size: 0.75rem;
+}

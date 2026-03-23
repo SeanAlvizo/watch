@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+
+<html lang="en" style="width: 1278px; height: 1594px; overflow: hidden; position: relative;">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Atelier Admin - Digital Curator</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Manrope:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-bright": "#faf9f8",
+                        "on-tertiary-fixed": "#241a00",
+                        "primary-fixed-dim": "#c8c6c5",
+                        "surface-dim": "#dadad9",
+                        "on-secondary-fixed": "#181c20",
+                        "inverse-on-surface": "#f1f0f0",
+                        "on-surface": "#1a1c1c",
+                        "surface": "#faf9f8",
+                        "primary": "#000000",
+                        "tertiary-fixed-dim": "#e9c349",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#4f3e00",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#e0e2e8",
+                        "on-error-container": "#93000a",
+                        "secondary": "#5b5f63",
+                        "outline": "#747878",
+                        "error": "#ba1a1a",
+                        "background": "#faf9f8",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#1c1b1b",
+                        "tertiary-fixed": "#ffe088",
+                        "surface-container-highest": "#e3e2e1",
+                        "secondary-container": "#e0e2e8",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#574500",
+                        "on-secondary-container": "#616569",
+                        "surface-container-high": "#e9e8e7",
+                        "on-primary-fixed": "#1c1b1b",
+                        "tertiary-container": "#cca730",
+                        "inverse-primary": "#c8c6c5",
+                        "on-surface-variant": "#444748",
+                        "inverse-surface": "#2f3130",
+                        "tertiary": "#735c00",
+                        "secondary-fixed-dim": "#c4c6cc",
+                        "surface-container": "#eeeeed",
+                        "on-primary-fixed-variant": "#474746",
+                        "on-background": "#1a1c1c",
+                        "on-primary-container": "#858383",
+                        "primary-fixed": "#e5e2e1",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e3e2e1",
+                        "surface-tint": "#5f5e5e",
+                        "surface-container-low": "#f4f3f2",
+                        "outline-variant": "#c4c7c7",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#44474b"
+                    },
+                    fontFamily: {
+                        "headline": ["Noto Serif"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .serif-display {
+            font-family: 'Noto Serif', serif;
+        }
+
+        .sans-data {
+            font-family: 'Manrope', sans-serif;
+        }
+
+        .glass-nav {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-surface font-body selection:bg-tertiary-fixed selection:text-on-tertiary-fixed">
+    <!-- Side Navigation Shell -->
+    <aside
+        class="hidden md:flex flex-col py-8 px-6 space-y-4 bg-[#f4f3f2] dark:bg-[#121212] h-screen w-64 fixed left-0 top-0 border-r-0 z-50">
+        <div class="mb-10 px-2">
+            <h2 class="font-noto-serif text-lg text-[#000000] dark:text-[#ffffff] leading-tight" style="">Atelier Admin
+            </h2>
+            <p class="font-manrope text-[10px] tracking-widest uppercase text-secondary opacity-70" style="">Luxury
+                Management</p>
+        </div>
+        <nav class="flex-1 space-y-2">
+            <!-- Active Tab: Dashboard -->
+            <a class="flex items-center space-x-3 px-4 py-3 text-[#000000] dark:text-[#ffffff] font-semibold bg-[#e3e2e1] dark:bg-[#252525] rounded-md transition-all duration-300"
+                href="#" style="">
+                <span class="material-symbols-outlined" data-icon="dashboard" style="">dashboard</span>
+                <span class="font-manrope text-sm tracking-wide uppercase" style="">Dashboard</span>
+            </a>
+            <a class="flex items-center space-x-3 px-4 py-3 text-[#737373] dark:text-[#a3a3a3] hover:text-[#000000] dark:hover:text-[#ffffff] hover:translate-x-1 transition-all duration-300"
+                href="#" style="">
+                <span class="material-symbols-outlined" data-icon="watch" style="">watch</span>
+                <span class="font-manrope text-sm tracking-wide uppercase" style="">Inventory</span>
+            </a>
+            <a class="flex items-center space-x-3 px-4 py-3 text-[#737373] dark:text-[#a3a3a3] hover:text-[#000000] dark:hover:text-[#ffffff] hover:translate-x-1 transition-all duration-300"
+                href="#" style="">
+                <span class="material-symbols-outlined" data-icon="group" style="">group</span>
+                <span class="font-manrope text-sm tracking-wide uppercase" style="">Customers</span>
+            </a>
+            <a class="flex items-center space-x-3 px-4 py-3 text-[#737373] dark:text-[#a3a3a3] hover:text-[#000000] dark:hover:text-[#ffffff] hover:translate-x-1 transition-all duration-300"
+                href="#" style="">
+                <span class="material-symbols-outlined" data-icon="payments" style="">payments</span>
+                <span class="font-manrope text-sm tracking-wide uppercase" style="">Sales</span>
+            </a>
+            <a class="flex items-center space-x-3 px-4 py-3 text-[#737373] dark:text-[#a3a3a3] hover:text-[#000000] dark:hover:text-[#ffffff] hover:translate-x-1 transition-all duration-300"
+                href="#" style="">
+                <span class="material-symbols-outlined" data-icon="leaderboard" style="">leaderboard</span>
+                <span class="font-manrope text-sm tracking-wide uppercase" style="">Reports</span>
+            </a>
+        </nav>
+    </aside>
+    <!-- Main Content Wrapper -->
+    <main class="md:ml-64 min-h-screen">
+        <!-- Top Navigation Bar -->
+        <header
+            class="fixed top-0 w-full md:w-[calc(100%-16rem)] flex justify-between items-center px-8 h-20 bg-[#faf9f8] dark:bg-[#1a1a1a] opacity-90 backdrop-blur-md z-40 shadow-[0px_20px_40px_rgba(0,0,0,0.04)]">
+            <div class="flex items-center">
+                <h1 class="font-noto-serif tracking-tight text-xl font-bold text-[#000000] dark:text-[#ffffff]"
+                    style=""><br /></h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <div class="relative group">
+                    <div
+                        class="h-10 w-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant/10 cursor-pointer">
+                        <img class="w-full h-full object-cover" data-alt="User profile administrator avatar"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfJBCmWCeOjuBTOxlUFM1F00PlgBjy-t7hhTi7CjkzMGaJUM29nltkoWjLdmTT6tKUos8HJMJdDOIHXiZ7WlEG18csl8DRkglglEdTk1NoIKRJzBCoqiqGKt4HmaKoW4klTO7-MK2lHBRdU0yrLqbyKTc2vb7xHkcJ2hexd4tMgGHnrEdkHHqa1Fn4K-YhH1pP75O3sS0AjvXwqSYKoYrbmI_e8fMRDZQ8OecUkynr5R0JyRj7XKnn-PwhoDcCmUDMjiHLe0Si2R6m"
+                            style="" />
+                    </div>
+                    <!-- Dropdown Menu -->
+                    <div
+                        class="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1a1a1a] rounded-md shadow-lg py-1 border border-outline-variant/20 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+                        <a class="flex items-center px-4 py-2 text-sm text-[#1a1c1c] dark:text-[#ffffff] hover:bg-[#f4f3f2] dark:hover:bg-[#333333] transition-colors"
+                            href="#" style="">
+                            <span class="material-symbols-outlined mr-3 text-sm" data-icon="settings"
+                                style="">settings</span>
+                            <span class="font-manrope tracking-wide" style="">Settings</span>
+                        </a>
+                        <div class="border-t border-outline-variant/10 my-1"></div>
+                        <a class="flex items-center px-4 py-2 text-sm text-[#ba1a1a] hover:bg-[#f4f3f2] dark:hover:bg-[#333333] transition-colors"
+                            href="#" style="">
+                            <span class="material-symbols-outlined mr-3 text-sm" data-icon="logout"
+                                style="">logout</span>
+                            <span class="font-manrope tracking-wide" style="">Log out</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- Content Canvas -->
+        <div class="pt-28 px-8 pb-12 max-w-7xl mx-auto">
+            <!-- Hero Heading -->
+            <div class="mb-12">
+                <h2 class="font-headline text-display-lg text-primary tracking-tight mb-2" style="">Portfolio Overview
+                </h2>
+                <p class="font-body text-secondary text-sm tracking-wide" style="">Real-time performance metrics for
+                    your boutique collection.</p>
+            </div>
+            <!-- Metric Cards (High-Level Metrics) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <!-- Total Inventory Value -->
+                <div
+                    class="bg-surface-container-lowest p-8 rounded-lg shadow-[0px_20px_40px_rgba(0,0,0,0.04)] group hover:translate-y-[-4px] transition-all duration-300">
+                    <p class="text-[10px] font-label font-bold tracking-[0.1em] text-outline uppercase mb-4" style="">
+                        Total Inventory Value</p>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="font-headline text-3xl font-bold" style="">₱12.8M</span>
+                        <span class="text-tertiary text-xs font-bold" style=""><br /></span>
+                    </div>
+                </div>
+                <!-- Total Sales -->
+                <div
+                    class="bg-surface-container-lowest p-8 rounded-lg shadow-[0px_20px_40px_rgba(0,0,0,0.04)] group hover:translate-y-[-4px] transition-all duration-300">
+                    <p class="text-[10px] font-label font-bold tracking-[0.1em] text-outline uppercase mb-4" style="">
+                        Total Sales (YTD)</p>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="font-headline text-3xl font-bold" style="">₱4.1M</span>
+                    </div>
+                </div>
+                <!-- Monthly Revenue -->
+                <div
+                    class="bg-surface-container-lowest p-8 rounded-lg shadow-[0px_20px_40px_rgba(0,0,0,0.04)] group hover:translate-y-[-4px] transition-all duration-300 border-b-2 border-tertiary">
+                    <p class="text-[10px] font-label font-bold tracking-[0.1em] text-outline uppercase mb-4" style="">
+                        Monthly Revenue</p>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="font-headline text-3xl font-bold" style="">₱842K</span>
+                        <span class="text-tertiary text-xs font-bold" style=""><br /></span>
+                    </div>
+                </div>
+                <!-- VIP Customers -->
+                <div
+                    class="bg-surface-container-lowest p-8 rounded-lg shadow-[0px_20px_40px_rgba(0,0,0,0.04)] group hover:translate-y-[-4px] transition-all duration-300">
+                    <p class="text-[10px] font-label font-bold tracking-[0.1em] text-outline uppercase mb-4" style="">
+                        VIP Customers Count</p>
+                    <div class="flex items-baseline space-x-2">
+                        <span class="font-headline text-3xl font-bold" style="">142</span>
+                        <span class="text-outline text-xs font-medium ml-1" style="">Active</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Bento Grid Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Left Column: Top Brands & Recent Activity -->
+                <div class="lg:col-span-8 space-y-8">
+                    <!-- Top Brands Showcase (Editorial Style) -->
+                    <section class="bg-surface-container-low p-10 rounded-xl relative overflow-hidden">
+                        <div class="relative z-10">
+                            <h3 class="font-headline text-2xl font-bold mb-8" style="">Dominant Manufactures</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div class="space-y-4">
+                                    <div
+                                        class="aspect-square bg-surface-container-lowest rounded-lg overflow-hidden group">
+                                        <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            data-alt="Classic luxury silver watch on dark background"
+                                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOE_u45n6jWgiio5gMhiLfVh4w9iXhPjnNgS38wVoAKvzuN8AVSj9OdllxoYzIVkMT1rLtlijQUej_W8Gkxok06KFIIqXHqRinwso04FMTX5hyMskaA8oZjZMeQQhLtrJB1npiY1P6npoT36N5qocUtvoS8-mXejpxZh2p98OvT-z9j7IVYsZ86M880nheIlQU4UljIayHwxWwERcShYz6hCNpJPHUyKlEcE9KLvIaIjDQyZJooD133owmaiL7zGXrfjcS0DwDUYg_"
+                                            style="" />
+                                    </div>
+                                    <div>
+                                        <p class="font-label font-bold text-[10px] tracking-widest uppercase text-tertiary"
+                                            style="">Rolex</p>
+                                        <p class="font-headline text-lg" style="">42% Share</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div
+                                        class="aspect-square bg-surface-container-lowest rounded-lg overflow-hidden group">
+                                        <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            data-alt="Gold watch movement detail"
+                                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3oZjgj81VI-wpPqwJM1pWAAnz24TzPJdqo9Z4wF6dr11JQ2LGFRw8oeHG6uTpNO9kECUzfPbDrgUAANhAOnb4OootH-h2DxKFZ700Vc01y_nR260STuhW-u_oovYTJuTzin3O7fFtyHD2Tulx--FsX4na5u8cZzwexfHoNVr7MBTcbfD_WgCO_Ttjnq3FKGoDVo3WKmUErRQho--iVMUFaRcAJkdI2bqiYX50TaiS9psQZSRl5Nlo8wl6j2MnKsiwHtKUhWO_5lJs"
+                                            style="" />
+                                    </div>
+                                    <div>
+                                        <p class="font-label font-bold text-[10px] tracking-widest uppercase text-tertiary"
+                                            style="">Patek Philippe</p>
+                                        <p class="font-headline text-lg" style="">28% Share</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div
+                                        class="aspect-square bg-surface-container-lowest rounded-lg overflow-hidden group">
+                                        <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            data-alt="Minimalist luxury watch face closeup"
+                                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBT8LK_-akmqp0kOQ86vWQWadO9bpidcEjNpXw3iMANt4NKrGT6dE2bjz4nXZgwzH1h_UdR9_tAeE-TXmFbZ95yCl463SixDyUJEJ5m2cGIUIWlpOi4aTkYjOC7srYAudLJDPd1BIBEUNwQQm83sbro4Tv60oggy65WXQnJXMvnIcBcttBT0RZhs_CNZPbN7YrbM3RI6bmxY0H5n7YEW3txKEBsbluF0EcYGwjyN8n0pgyVQELQQv5isY1JVBxbVzUp0KdywHvgwTOd"
+                                            style="" />
+                                    </div>
+                                    <div>
+                                        <p class="font-label font-bold text-[10px] tracking-widest uppercase text-tertiary"
+                                            style="">Audemars Piguet</p>
+                                        <p class="font-headline text-lg" style="">15% Share</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Recent Activity Feed -->
+                    <section class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,0,0,0.02)]">
+                        <div class="flex justify-between items-end mb-10">
+                            <h3 class="font-headline text-2xl font-bold" style="">Recent Acquisitions &amp; Sales</h3>
+                            <a class="text-[10px] font-label font-bold tracking-widest uppercase text-outline hover:text-primary transition-colors"
+                                href="#" style="">View All Archive</a>
+                        </div>
+                        <div class="space-y-8">
+                            <div class="flex items-center justify-between group">
+                                <div class="flex items-center space-x-6">
+                                    <div
+                                        class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-primary" data-icon="sell"
+                                            style="">sell</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-body font-semibold text-primary" style="">Rolex GMT-Master II
+                                        </h4>
+                                        <p class="text-sm text-secondary" style="">Sold to <span
+                                                class="text-primary font-medium" style="">John Doe</span></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-headline font-bold text-lg" style="">+$18,400</p>
+                                    <p class="text-[10px] font-label font-bold text-outline uppercase" style="">2h ago
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between group">
+                                <div class="flex items-center space-x-6">
+                                    <div
+                                        class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-primary" data-icon="inventory_2"
+                                            style="">inventory_2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-body font-semibold text-primary" style="">Patek Philippe
+                                            Nautilus</h4>
+                                        <p class="text-sm text-secondary" style="">Added to <span
+                                                class="text-primary font-medium" style="">Vault B</span></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-headline font-bold text-lg" style="">Inventory Update</p>
+                                    <p class="text-[10px] font-label font-bold text-outline uppercase" style="">5h ago
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between group">
+                                <div class="flex items-center space-x-6">
+                                    <div
+                                        class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-primary" data-icon="person_add"
+                                            style="">person_add</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-body font-semibold text-primary" style="">New VIP Application
+                                        </h4>
+                                        <p class="text-sm text-secondary" style="">Source: <span
+                                                class="text-primary font-medium" style="">Concierge referral</span></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-headline font-bold text-lg" style="">Lead Generation</p>
+                                    <p class="text-[10px] font-label font-bold text-outline uppercase" style="">1d ago
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <!-- Right Column: Action Items & Low Stock -->
+                <div class="lg:col-span-4 space-y-8">
+                    <!-- Action Items -->
+                    <section class="bg-primary text-on-primary p-8 rounded-xl shadow-xl">
+                        <div class="flex items-center space-x-3 mb-8">
+                            <span class="material-symbols-outlined text-tertiary-fixed-dim" data-icon="priority_high"
+                                style="">priority_high</span>
+                            <h3 class="font-headline text-xl" style="">Action Items</h3>
+                        </div>
+                        <ul class="space-y-6">
+                            <li class="border-b border-outline-variant/20 pb-4" style="">
+                                <p class="text-[10px] font-label font-bold tracking-widest text-on-primary-container mb-1 uppercase"
+                                    style="">Authentication Pending</p>
+                                <p class="text-sm font-body leading-relaxed" style="">Vacheron Constantin Overseas
+                                    requires workshop validation.</p>
+                            </li>
+                            <li class="border-b border-outline-variant/20 pb-4" style="">
+                                <p class="text-[10px] font-label font-bold tracking-widest text-on-primary-container mb-1 uppercase"
+                                    style="">Shipment Delay</p>
+                                <p class="text-sm font-body leading-relaxed" style="">Incoming shipment #8842 held at
+                                    customs (London).</p>
+                            </li>
+                            <li class="" style="">
+                                <p class="text-[10px] font-label font-bold tracking-widest text-on-primary-container mb-1 uppercase"
+                                    style="">Contract Expiry</p>
+                                <p class="text-sm font-body leading-relaxed" style="">Insurance policy for Gallery
+                                    Sector A expires in 3 days.</p>
+                            </li>
+                        </ul>
+                        <button
+                            class="w-full mt-8 bg-surface-container-lowest text-primary py-4 rounded font-label font-bold tracking-widest uppercase text-[10px] hover:bg-tertiary transition-colors"
+                            style="">Open Command Center</button>
+                    </section>
+                    <!-- Low Stock Inventory -->
+                    <section class="bg-surface-container-low p-8 rounded-xl border border-outline-variant/10">
+                        <h3 class="font-headline text-xl font-bold mb-8" style="">Low Stock Alerts</h3>
+                        <div class="space-y-6">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-16 h-16 rounded overflow-hidden">
+                                    <img class="w-full h-full object-cover" data-alt="Brown leather strap watch detail"
+                                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-0GHaBApGj4k_kngr6V7FygKHaa-ASdhcUyc7mWFbceTbzBqpkVQHkbWkxtWX0e-WhEo7TuH61FnGFo1x5o4hcVbQr-pMTzOMP7yl8IXz_mRJhLt3SSiYwYKC9-oc3RLQzeShIV9KYKRpMqkmV4yyE0c0OpUdYYcWz9ovJtGJCugHDQ2J9DjeGnIi4tk2tvc8ImbQWpQ8cqP9yz6_g_5TBFWqco8nduaxlczCNERVkghfIWpCKDQWcYZmfYO8dLZHB-H2U80Io30u"
+                                        style="" />
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-body text-sm font-bold" style="">Cartier Tank</h4>
+                                    <p class="text-[10px] text-outline font-label uppercase" style="">1 Unit Remaining
+                                    </p>
+                                </div>
+                                <button class="text-tertiary" style="">
+                                    <span class="material-symbols-outlined" data-icon="shopping_basket"
+                                        style="">shopping_basket</span>
+                                </button>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-16 h-16 rounded overflow-hidden">
+                                    <img class="w-full h-full object-cover"
+                                        data-alt="Close up of mechanical watch gears"
+                                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2EpI9b7c2lFyNwOM-MrPmavj4sCrIpA--3qYcSNSVbI30P6WE-dlfPFg89u5KdEqpZjg_t0YOkMUzdzeDHMGuxWlAf8A740kwXos9590Ym4w1KHTNCpfHFu_W1UMTNV0emYIJFBn2Rz6yeTA7Urfr17rHAuW2KpxvhLyLXrHUUVEgLJzMqORHZQjIIpcXuDFsYSoZ-nUNibe-uZ-0a1fM7HOoKuCTLQ2ZidLY5P9KFkuzk_CMnfA0VpNUAg3A4FdtccGchgPc3XJT"
+                                        style="" />
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-body text-sm font-bold" style="">IWC Portugieser</h4>
+                                    <p class="text-[10px] text-outline font-label uppercase" style="">0 Units Remaining
+                                    </p>
+                                </div>
+                                <button class="text-tertiary" style="">
+                                    <span class="material-symbols-outlined" data-icon="shopping_basket"
+                                        style="">shopping_basket</span>
+                                </button>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-16 h-16 rounded overflow-hidden">
+                                    <img class="w-full h-full object-cover" data-alt="Executive luxury watch on wrist"
+                                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbp1tCBqPemu4V0Lp-djb4A_-buRYMG4yron_lBHgAJGBo6sK4crbrmkRWfgxWAAKXzbOFfTQc0Q_y-OB3s39k-M5OUw_Qk2KtZ_hfpc_JihU_lfHe8SmKQ__9prwRg3eVhjYoeWVYl7Togvcs9Lo9ClfmPXP0G-H97CWVAfmPtJ_Mu5CAh6kf3N67dSbvVxclQElgZWOoBXyvwoHDHR36ZayX4uTzNf91uv2PO2zJsx5NTtLJP_ZRM68ztVkvB_o9LE5Xde4WsKH9"
+                                        style="" />
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-body text-sm font-bold" style="">Omega Speedmaster</h4>
+                                    <p class="text-[10px] text-outline font-label uppercase" style="">2 Units Remaining
+                                    </p>
+                                </div>
+                                <button class="text-tertiary" style="">
+                                    <span class="material-symbols-outlined" data-icon="shopping_basket"
+                                        style="">shopping_basket</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-10 pt-8 border-t border-outline-variant/30 text-center">
+                            <p class="font-body text-sm text-secondary italic" style="">"Inventory is the lifeblood of
+                                horology."</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <!-- Footer Decorative -->
+            <footer
+                class="mt-24 pt-12 border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center opacity-40">
+                <div class="mb-4 md:mb-0">
+                    <p class="font-noto-serif text-sm" style=""><br /></p>
+                </div>
+                <div class="flex space-x-8">
+                    <span class="text-[10px] font-label uppercase tracking-widest" style=""><br /></span>
+                    <span class="text-[10px] font-label uppercase tracking-widest" style=""><br /></span>
+                    <span class="text-[10px] font-label uppercase tracking-widest" style=""><br /></span>
+                </div>
+            </footer>
+        </div>
+    </main>
+    <!-- Floating Action Button: Contextual Dashboard FAB -->
+</body>
+
+</html>
