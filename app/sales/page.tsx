@@ -24,53 +24,110 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const supabase = createClient();
 
   const fetchData = useCallback(async () => {
-    const { data: salesData } = await supabase.from('sales').select('*, watches(brand, model, reference_number), customers(first_name, last_name, tier)').order('sold_at', { ascending: false });
-    const { data: watchData } = await supabase.from('watches').select('id, brand, model, reference_number, price, status');
-    const { data: customerData } = await supabase.from('customers').select('id, first_name, last_name');
-    if (salesData) setSales(salesData as Sale[]);
-    if (watchData) setWatches(watchData);
-    if (customerData) setCustomers(customerData);
-    setLoading(false);
-  }, []);
+    try {
+      setError(null);
+      const { data: salesData, error: salesError } = await supabase.from('sales').select('*, watches(brand, model, reference_number), customers(first_name, last_name, tier)').order('sold_at', { ascending: false });
+      if (salesError) throw salesError;
+      
+      const { data: watchData, error: watchError } = await supabase.from('watches').select('id, brand, model, reference_number, price, status');
+      if (watchError) throw watchError;
+      
+      const { data: customerData, error: customerError } = await supabase.from('customers').select('id, first_name, last_name');
+      if (customerError) throw customerError;
+      
+      if (salesData) setSales(salesData as Sale[]);
+      if (watchData) setWatches(watchData);
+      if (customerData) setCustomers(customerData);
+      setLoading(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load sales data';
+      console.error('Fetch sales data error:', err);
+      setError(msg);
+      setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     fetchData();
-    const channel = supabase.channel('sales-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => fetchData()).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchData]);
+    let mounted = true;
+    const channel = supabase.channel('sales-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => {
+      if (mounted) fetchData();
+    }).subscribe();
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData, supabase]);
 
   const handleCreateSale = async () => {
-    if (!selectedWatch || !selectedCustomer) return;
-    setSaving(true);
-    const txnId = `HS-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-    await supabase.from('sales').insert({ transaction_id: txnId, watch_id: selectedWatch, customer_id: selectedCustomer, sale_price: salePrice, payment_method: paymentMethod, status: 'completed', sold_at: new Date().toISOString() });
-    await supabase.from('watches').update({ status: 'sold', updated_at: new Date().toISOString() }).eq('id', selectedWatch);
-    const w = watches.find(x => x.id === selectedWatch);
-    const c = customers.find(x => x.id === selectedCustomer);
-    if (w && c) {
-      await supabase.from('activity_log').insert({ type: 'sale', icon: 'sell', title: `${w.brand} ${w.model}`, description: `Sold to ${c.first_name} ${c.last_name} — +₱${salePrice.toLocaleString()}` });
-      // Update customer lifetime value
-      const { data: custData } = await supabase.from('customers').select('lifetime_value').eq('id', selectedCustomer).single();
-      if (custData) await supabase.from('customers').update({ lifetime_value: (custData.lifetime_value || 0) + salePrice }).eq('id', selectedCustomer);
+    if (!selectedWatch || !selectedCustomer || salePrice <= 0) {
+      setValidationError('Please select a watch, client, and valid sale price');
+      return;
     }
-    setSaving(false); setShowModal(false); fetchData();
+    
+    try {
+      setSaving(true);
+      setValidationError(null);
+      const txnId = `HS-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+      
+      const { error: insertError } = await supabase.from('sales').insert({ transaction_id: txnId, watch_id: selectedWatch, customer_id: selectedCustomer, sale_price: salePrice, payment_method: paymentMethod, status: 'completed', sold_at: new Date().toISOString() });
+      if (insertError) throw insertError;
+      
+      const { error: watchError } = await supabase.from('watches').update({ status: 'sold', updated_at: new Date().toISOString() }).eq('id', selectedWatch);
+      if (watchError) throw watchError;
+      
+      const w = watches.find(x => x.id === selectedWatch);
+      const c = customers.find(x => x.id === selectedCustomer);
+      if (w && c) {
+        const { error: actError } = await supabase.from('activity_log').insert({ type: 'sale', icon: 'sell', title: `${w.brand} ${w.model}`, description: `Sold to ${c.first_name} ${c.last_name} — +₱${salePrice.toLocaleString()}` });
+        if (actError) console.warn('Activity log error:', actError);
+        
+        // Update customer lifetime value
+        const { data: custData, error: custQueryError } = await supabase.from('customers').select('lifetime_value').eq('id', selectedCustomer).single();
+        if (custQueryError) console.warn('Query customer error:', custQueryError);
+        if (custData) {
+          const { error: updateError } = await supabase.from('customers').update({ lifetime_value: (custData.lifetime_value || 0) + salePrice }).eq('id', selectedCustomer);
+          if (updateError) console.warn('Update customer error:', updateError);
+        }
+      }
+      setSaving(false); setShowModal(false); fetchData();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to create sale';
+      console.error('Create sale error:', err);
+      setValidationError(msg);
+      setSaving(false);
+    }
   };
 
   const handleStatusChange = async (saleId: string, newStatus: string) => {
-    await supabase.from('sales').update({ status: newStatus }).eq('id', saleId);
-    fetchData();
+    try {
+      const { error: updateError } = await supabase.from('sales').update({ status: newStatus }).eq('id', saleId);
+      if (updateError) throw updateError;
+      fetchData();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update sale status';
+      console.error('Update status error:', err);
+      setError(msg);
+    }
   };
 
   const handleExport = () => {
-    const csv = ['Transaction ID,Client,Watch,Amount,Payment,Status,Date', ...sales.map(s => `${s.transaction_id},"${s.customers?.first_name || ''} ${s.customers?.last_name || ''}","${s.watches?.brand || ''} ${s.watches?.model || ''}",${s.sale_price},${s.payment_method},${s.status},${s.sold_at}`)].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'sales_ledger.csv'; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const csv = ['Transaction ID,Client,Watch,Amount,Payment,Status,Date', ...sales.map(s => `${s.transaction_id},"${s.customers?.first_name || ''} ${s.customers?.last_name || ''}","${s.watches?.brand || ''} ${s.watches?.model || ''}",${s.sale_price},${s.payment_method},${s.status},${s.sold_at}`)].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'sales_ledger.csv'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export error:', err);
+      setError('Failed to export CSV');
+    }
   };
 
   const completedTotal = sales.filter(s => s.status === 'completed').reduce((sum, s) => sum + s.sale_price, 0);
@@ -79,6 +136,23 @@ export default function SalesPage() {
   const availableWatches = watches.filter(w => w.status === 'in_stock');
 
   if (loading) return (<><Sidebar /><main className="md:ml-64 min-h-screen flex items-center justify-center"><p className="label-engraved text-outline animate-pulse">Loading Sales...</p></main></>);
+
+  if (error) {
+    return (
+      <>
+        <Sidebar />
+        <main className="md:ml-64 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 font-body mb-4">Error loading sales</p>
+            <p className="text-[#737373] text-sm mb-6">{error}</p>
+            <button onClick={() => { setLoading(true); fetchData(); }} className="bg-[#000] text-white px-4 py-2 rounded text-sm hover:bg-[#2d2d2d]">
+              Retry
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -173,6 +247,11 @@ export default function SalesPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()}>
             <h2 className="font-headline text-xl font-bold mb-6">New Sale</h2>
+            {validationError && (
+              <div className="mb-6 bg-[#fcebea] border border-[#fac8c8] text-[#db5a5a] px-4 py-3 rounded-[4px] text-[12px] font-body">
+                {validationError}
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label className="block font-label text-[10px] font-bold tracking-widest uppercase text-[#737373] mb-1">Select Timepiece</label>

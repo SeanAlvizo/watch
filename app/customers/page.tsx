@@ -27,40 +27,102 @@ export default function CustomersPage() {
   const [brandsInput, setBrandsInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const supabase = createClient();
 
   const fetchCustomers = useCallback(async () => {
-    const { data } = await supabase.from('customers').select('*').order('lifetime_value', { ascending: false });
-    if (data) setCustomers(data as Customer[]);
-    setLoading(false);
-  }, []);
+    try {
+      setError(null);
+      const { data, error: err } = await supabase.from('customers').select('*').order('lifetime_value', { ascending: false });
+      if (err) throw err;
+      if (data) setCustomers(data as Customer[]);
+      setLoading(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch customers';
+      console.error('Fetch customers error:', err);
+      setError(msg);
+      setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     fetchCustomers();
-    const channel = supabase.channel('customers-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchCustomers()).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchCustomers]);
+    let mounted = true;
+    const channel = supabase.channel('customers-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+      if (mounted) fetchCustomers();
+    }).subscribe();
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [fetchCustomers, supabase]);
 
-  const openAdd = () => { setEditingCustomer(null); setFormData(emptyCustomer); setBrandsInput(''); setShowModal(true); };
-  const openEdit = (c: Customer) => { setEditingCustomer(c); setFormData({ first_name: c.first_name, last_name: c.last_name, email: c.email || '', phone: c.phone || '', location: c.location || '', tier: c.tier, lifetime_value: c.lifetime_value, preferred_brands: c.preferred_brands || [], avatar_url: c.avatar_url || '', notes: c.notes || '' }); setBrandsInput((c.preferred_brands || []).join(', ')); setShowModal(true); };
+  const openAdd = () => { setEditingCustomer(null); setFormData(emptyCustomer); setBrandsInput(''); setValidationError(null); setShowModal(true); };
+  const openEdit = (c: Customer) => { setEditingCustomer(c); setFormData({ first_name: c.first_name, last_name: c.last_name, email: c.email || '', phone: c.phone || '', location: c.location || '', tier: c.tier, lifetime_value: c.lifetime_value, preferred_brands: c.preferred_brands || [], avatar_url: c.avatar_url || '', notes: c.notes || '' }); setBrandsInput((c.preferred_brands || []).join(', ')); setValidationError(null); setShowModal(true); };
+
+  const validateEmail = (email: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validateForm = (): boolean => {
+    if (!formData.first_name?.trim()) {
+      setValidationError('First name is required');
+      return false;
+    }
+    if (!formData.last_name?.trim()) {
+      setValidationError('Last name is required');
+      return false;
+    }
+    if (formData.email && !validateEmail(formData.email)) {
+      setValidationError('Please enter a valid email address');
+      return false;
+    }
+    if (formData.lifetime_value < 0) {
+      setValidationError('Lifetime value cannot be negative');
+      return false;
+    }
+    setValidationError(null);
+    return true;
+  };
 
   const handleSave = async () => {
-    setSaving(true);
-    const payload = { ...formData, preferred_brands: brandsInput.split(',').map(b => b.trim()).filter(Boolean) };
-    if (editingCustomer) {
-      await supabase.from('customers').update(payload).eq('id', editingCustomer.id);
-    } else {
-      await supabase.from('customers').insert(payload);
-      await supabase.from('activity_log').insert({ type: 'customer', icon: 'person_add', title: `${payload.first_name} ${payload.last_name}`, description: `New ${payload.tier} client added — ${payload.location}` });
+    if (!validateForm()) return;
+    
+    try {
+      setSaving(true);
+      setValidationError(null);
+      const payload = { ...formData, preferred_brands: brandsInput.split(',').map(b => b.trim()).filter(Boolean) };
+      if (editingCustomer) {
+        const { error: updateError } = await supabase.from('customers').update(payload).eq('id', editingCustomer.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase.from('customers').insert(payload);
+        if (insertError) throw insertError;
+        const { error: actError } = await supabase.from('activity_log').insert({ type: 'customer', icon: 'person_add', title: `${payload.first_name} ${payload.last_name}`, description: `New ${payload.tier} client added — ${payload.location}` });
+        if (actError) console.warn('Activity log error:', actError);
+      }
+      setSaving(false); setShowModal(false); fetchCustomers();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save customer';
+      console.error('Save customer error:', err);
+      setValidationError(msg);
+      setSaving(false);
     }
-    setSaving(false); setShowModal(false); fetchCustomers();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Remove this client profile?')) return;
-    await supabase.from('customers').delete().eq('id', id);
-    fetchCustomers();
+    try {
+      const { error: deleteError } = await supabase.from('customers').delete().eq('id', id);
+      if (deleteError) throw deleteError;
+      fetchCustomers();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete customer';
+      console.error('Delete customer error:', err);
+      setError(msg);
+    }
   };
 
   const filtered = customers.filter(c => {
@@ -74,6 +136,23 @@ export default function CustomersPage() {
   const filterButtons = ["ALL CUSTOMERS", "VIP ONLY", "TOP SPENDERS"];
 
   if (loading) return (<><Sidebar /><main className="md:ml-64 min-h-screen flex items-center justify-center"><p className="label-engraved text-outline animate-pulse">Loading Clients...</p></main></>);
+
+  if (error) {
+    return (
+      <>
+        <Sidebar />
+        <main className="md:ml-64 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 font-body mb-4">Error loading customers</p>
+            <p className="text-[#737373] text-sm mb-6">{error}</p>
+            <button onClick={() => { setLoading(true); fetchCustomers(); }} className="bg-[#000] text-white px-4 py-2 rounded text-sm hover:bg-[#2d2d2d]">
+              Retry
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -153,6 +232,11 @@ export default function CustomersPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-8" onClick={e => e.stopPropagation()}>
             <h2 className="font-headline text-xl font-bold mb-6">{editingCustomer ? 'Edit Client' : 'New Client'}</h2>
+            {validationError && (
+              <div className="mb-6 bg-[#fcebea] border border-[#fac8c8] text-[#db5a5a] px-4 py-3 rounded-[4px] text-[12px] font-body">
+                {validationError}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               {[{ l: 'First Name', k: 'first_name' }, { l: 'Last Name', k: 'last_name' }, { l: 'Email', k: 'email' }, { l: 'Phone', k: 'phone' }, { l: 'Location', k: 'location' }, { l: 'Avatar URL', k: 'avatar_url' }].map(f => (
                 <div key={f.k}>

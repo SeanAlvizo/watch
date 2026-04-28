@@ -14,15 +14,24 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setEmail(user.email || "");
-        setFirstName(user.user_metadata?.first_name || user.user_metadata?.full_name?.split(" ")[0] || "Admin");
-        setLastName(user.user_metadata?.last_name || user.user_metadata?.full_name?.split(" ")[1] || "");
+      try {
+        const supabase = createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (user) {
+          setEmail(user.email || "");
+          setFirstName(user.user_metadata?.first_name || user.user_metadata?.full_name?.split(" ")[0] || "Admin");
+          setLastName(user.user_metadata?.last_name || user.user_metadata?.full_name?.split(" ")[1] || "");
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to load profile';
+        console.error('Load profile error:', err);
+        setMessage(msg);
+        setIsError(true);
       }
     };
     loadProfile();
@@ -30,37 +39,66 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ data: { first_name: firstName, last_name: lastName, full_name: `${firstName} ${lastName}` } });
-    setMessage(error ? error.message : "Profile updated successfully.");
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ data: { first_name: firstName, last_name: lastName, full_name: `${firstName} ${lastName}` } });
+      setIsError(!!error);
+      setMessage(error ? error.message : "Profile updated successfully.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update profile';
+      console.error('Save profile error:', err);
+      setIsError(true);
+      setMessage(msg);
+    }
     setSaving(false);
     setTimeout(() => setMessage(""), 3000);
   };
 
   const handleChangePassword = async () => {
-    if (!newPassword || newPassword.length < 6) { setMessage("Password must be at least 6 characters."); return; }
+    if (!newPassword || newPassword.length < 8) { 
+      setIsError(true);
+      setMessage("Password must be at least 8 characters."); 
+      return; 
+    }
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setMessage(error ? error.message : "Password updated successfully.");
-    setNewPassword(""); setCurrentPassword("");
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      setIsError(!!error);
+      setMessage(error ? error.message : "Password updated successfully.");
+      setNewPassword(""); 
+      setCurrentPassword("");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to change password';
+      console.error('Change password error:', err);
+      setIsError(true);
+      setMessage(msg);
+    }
     setSaving(false);
     setTimeout(() => setMessage(""), 3000);
   };
 
   const handleExportData = async () => {
-    const supabase = createClient();
-    const [{ data: watches }, { data: customers }, { data: sales }] = await Promise.all([
-      supabase.from('watches').select('*'),
-      supabase.from('customers').select('*'),
-      supabase.from('sales').select('*'),
-    ]);
-    const exportData = { watches, customers, sales, exported_at: new Date().toISOString() };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'atelier_export.json'; a.click();
-    URL.revokeObjectURL(url);
-    setMessage("Data exported successfully.");
+    try {
+      const supabase = createClient();
+      const [{ data: watches }, { data: customers }, { data: sales }] = await Promise.all([
+        supabase.from('watches').select('*'),
+        supabase.from('customers').select('*'),
+        supabase.from('sales').select('*'),
+      ]);
+      const exportData = { watches, customers, sales, exported_at: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'atelier_export.json'; a.click();
+      URL.revokeObjectURL(url);
+      setIsError(false);
+      setMessage("Data exported successfully.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to export data';
+      console.error('Export data error:', err);
+      setIsError(true);
+      setMessage(msg);
+    }
     setTimeout(() => setMessage(""), 3000);
   };
 
@@ -73,7 +111,7 @@ export default function SettingsPage() {
           <div className="max-w-5xl mx-auto">
             <div className="mb-8"><h1 className="font-headline text-3xl font-bold text-[#2d2d2d] tracking-tight mb-2">Settings</h1><p className="font-body text-[#737373] text-sm tracking-wide">Manage your account preferences and configurations.</p></div>
 
-            {message && <div className={`mb-4 px-4 py-3 rounded-[4px] text-[12px] font-body ${message.includes('error') || message.includes('Error') ? 'bg-[#fcebea] text-[#db5a5a]' : 'bg-[#e2f0e6] text-[#2d7a46]'}`}>{message}</div>}
+            {message && <div className={`mb-4 px-4 py-3 rounded-[4px] text-[12px] font-body ${isError ? 'bg-[#fcebea] text-[#db5a5a]' : 'bg-[#e2f0e6] text-[#2d7a46]'}`}>{message}</div>}
 
             <div className="flex flex-col md:flex-row gap-8">
               <div className="w-full md:w-64 flex-shrink-0 space-y-2">

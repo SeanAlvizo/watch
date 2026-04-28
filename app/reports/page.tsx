@@ -10,45 +10,57 @@ export default function ReportsPage() {
   const [brandEquity, setBrandEquity] = useState<{ brand: string; pct: number }[]>([]);
   const [monthlyData, setMonthlyData] = useState<{ month: string; total: number; pct: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const supabase = createClient();
-    const { data: sales } = await supabase.from('sales').select('sale_price, status, sold_at');
-    const { data: watches } = await supabase.from('watches').select('brand, status, price');
+    try {
+      setError(null);
+      const supabase = createClient();
+      const { data: sales, error: salesError } = await supabase.from('sales').select('sale_price, status, sold_at');
+      if (salesError) throw salesError;
+      
+      const { data: watches, error: watchesError } = await supabase.from('watches').select('brand, status, price');
+      if (watchesError) throw watchesError;
 
-    if (sales && watches) {
-      const completedSales = sales.filter(s => s.status === 'completed');
-      const netRevenue = completedSales.reduce((sum, s) => sum + s.sale_price, 0);
-      const avgOrder = completedSales.length > 0 ? Math.round(netRevenue / completedSales.length) : 0;
-      const soldCount = watches.filter(w => w.status === 'sold').length;
-      const sellThrough = watches.length > 0 ? Math.round((soldCount / watches.length) * 100) : 0;
+      if (sales && watches) {
+        const completedSales = sales.filter(s => s.status === 'completed');
+        const netRevenue = completedSales.reduce((sum, s) => sum + s.sale_price, 0);
+        const avgOrder = completedSales.length > 0 ? Math.round(netRevenue / completedSales.length) : 0;
+        const soldCount = watches.filter(w => w.status === 'sold').length;
+        const sellThrough = watches.length > 0 ? Math.round((soldCount / watches.length) * 100) : 0;
 
-      setMetrics({ netRevenue, avgOrder, sellThrough, totalWatches: watches.length, soldWatches: soldCount, salesCount: completedSales.length });
+        setMetrics({ netRevenue, avgOrder, sellThrough, totalWatches: watches.length, soldWatches: soldCount, salesCount: completedSales.length });
 
-      // Brand equity
-      const brandCounts: Record<string, number> = {};
-      watches.forEach(w => { brandCounts[w.brand] = (brandCounts[w.brand] || 0) + w.price; });
-      const totalValue = Object.values(brandCounts).reduce((a, b) => a + b, 0);
-      const sorted = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]);
-      setBrandEquity(sorted.map(([brand, val]) => ({ brand, pct: Math.round((val / totalValue) * 100) })));
+        // Brand equity
+        const brandCounts: Record<string, number> = {};
+        watches.forEach(w => { brandCounts[w.brand] = (brandCounts[w.brand] || 0) + w.price; });
+        const totalValue = Object.values(brandCounts).reduce((a, b) => a + b, 0);
+        const sorted = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]);
+        setBrandEquity(sorted.map(([brand, val]) => ({ brand, pct: Math.round((val / totalValue) * 100) })));
 
-      // Monthly revenue (last 6 months)
-      const months: Record<string, number> = {};
-      const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-      completedSales.forEach(s => {
-        const d = new Date(s.sold_at);
-        const key = monthNames[d.getMonth()];
-        months[key] = (months[key] || 0) + s.sale_price;
-      });
-      const maxVal = Math.max(...Object.values(months), 1);
-      const now = new Date();
-      const last6 = Array.from({ length: 6 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - 5 + i);
-        return monthNames[d.getMonth()];
-      });
-      setMonthlyData(last6.map(m => ({ month: m, total: months[m] || 0, pct: Math.round(((months[m] || 0) / maxVal) * 100) })));
+        // Monthly revenue (last 6 months)
+        const months: Record<string, number> = {};
+        const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        completedSales.forEach(s => {
+          const d = new Date(s.sold_at);
+          const key = monthNames[d.getMonth()];
+          months[key] = (months[key] || 0) + s.sale_price;
+        });
+        const maxVal = Math.max(...Object.values(months), 1);
+        const now = new Date();
+        const last6 = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - 5 + i);
+          return monthNames[d.getMonth()];
+        });
+        setMonthlyData(last6.map(m => ({ month: m, total: months[m] || 0, pct: Math.round(((months[m] || 0) / maxVal) * 100) })));
+      }
+      setLoading(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load reports';
+      console.error('Reports fetch error:', err);
+      setError(msg);
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -57,14 +69,36 @@ export default function ReportsPage() {
   const barColors = ['bg-[#f2ca4b]', 'bg-[#999]', 'bg-[#666]', 'bg-[#555]', 'bg-[#444]', 'bg-[#333]'];
 
   const handleExportLedger = () => {
-    const csv = `Metric,Value\nNet Revenue,${metrics.netRevenue}\nAvg Order Value,${metrics.avgOrder}\nSell-Through Rate,${metrics.sellThrough}%\nTotal Watches,${metrics.totalWatches}\nSold Watches,${metrics.soldWatches}\nTotal Sales,${metrics.salesCount}\n\nBrand,Equity %\n${brandEquity.map(b => `${b.brand},${b.pct}%`).join('\n')}`;
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'heritage_report.csv'; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const csv = `Metric,Value\nNet Revenue,${metrics.netRevenue}\nAvg Order Value,${metrics.avgOrder}\nSell-Through Rate,${metrics.sellThrough}%\nTotal Watches,${metrics.totalWatches}\nSold Watches,${metrics.soldWatches}\nTotal Sales,${metrics.salesCount}\n\nBrand,Equity %\n${brandEquity.map(b => `${b.brand},${b.pct}%`).join('\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'heritage_report.csv'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export error:', err);
+      setError('Failed to export report');
+    }
   };
 
   if (loading) return (<><Sidebar /><main className="md:ml-64 min-h-screen flex items-center justify-center"><p className="label-engraved text-outline animate-pulse">Loading Reports...</p></main></>);
+
+  if (error) {
+    return (
+      <>
+        <Sidebar />
+        <main className="md:ml-64 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 font-body mb-4">Error loading reports</p>
+            <p className="text-[#737373] text-sm mb-6">{error}</p>
+            <button onClick={() => { setLoading(true); fetchData(); }} className="bg-[#000] text-white px-4 py-2 rounded text-sm hover:bg-[#2d2d2d]">
+              Retry
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>

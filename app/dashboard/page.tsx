@@ -30,78 +30,91 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<{ icon: string; title: string; subtitlePre: string; subtitleBold: string; value: string; timeAgo: string }[]>([]);
   const [lowStock, setLowStock] = useState<{ name: string; unitsLeft: number; imageSrc: string; imageAlt: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const supabase = createClient();
+    try {
+      setError(null);
+      const supabase = createClient();
 
-    // Fetch inventory value (in_stock + reserved)
-    const { data: watches } = await supabase.from('watches').select('brand, price, status, image_url, model');
-    
-    // Fetch sales
-    const { data: sales } = await supabase.from('sales').select('sale_price, status, sold_at');
-    
-    // Fetch customers
-    const { data: customers } = await supabase.from('customers').select('tier');
-    
-    // Fetch activity log
-    const { data: activityData } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(5);
-
-    if (watches) {
-      const inventoryValue = watches.filter(w => w.status !== 'sold').reduce((sum, w) => sum + (w.price || 0), 0);
-      const completedSales = (sales || []).filter(s => s.status === 'completed').reduce((sum, s) => sum + (s.sale_price || 0), 0);
+      // Fetch inventory value (in_stock + reserved)
+      const { data: watches, error: watchesError } = await supabase.from('watches').select('brand, price, status, image_url, model');
+      if (watchesError) throw watchesError;
       
-      // Monthly revenue (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const monthlyRev = (sales || [])
-        .filter(s => s.status === 'completed' && new Date(s.sold_at) >= thirtyDaysAgo)
-        .reduce((sum, s) => sum + (s.sale_price || 0), 0);
+      // Fetch sales
+      const { data: sales, error: salesError } = await supabase.from('sales').select('sale_price, status, sold_at');
+      if (salesError) throw salesError;
+      
+      // Fetch customers
+      const { data: customers, error: customersError } = await supabase.from('customers').select('tier');
+      if (customersError) throw customersError;
+      
+      // Fetch activity log
+      const { data: activityData, error: activityError } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(5);
+      if (activityError) throw activityError;
 
-      const vipCount = (customers || []).filter(c => ['platinum', 'vip_ambassador', 'private_equity'].includes(c.tier)).length;
+      if (watches) {
+        const inventoryValue = watches.filter(w => w.status !== 'sold').reduce((sum, w) => sum + (w.price || 0), 0);
+        const completedSales = (sales || []).filter(s => s.status === 'completed').reduce((sum, s) => sum + (s.sale_price || 0), 0);
+        
+        // Monthly revenue (last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const monthlyRev = (sales || [])
+          .filter(s => s.status === 'completed' && new Date(s.sold_at) >= thirtyDaysAgo)
+          .reduce((sum, s) => sum + (s.sale_price || 0), 0);
 
-      setMetrics({ inventoryValue, totalSales: completedSales, monthlyRevenue: monthlyRev, vipCount });
+        const vipCount = (customers || []).filter(c => ['platinum', 'vip_ambassador', 'private_equity'].includes(c.tier)).length;
 
-      // Brand shares — top 3
-      const brandCounts: Record<string, number> = {};
-      watches.forEach(w => { brandCounts[w.brand] = (brandCounts[w.brand] || 0) + 1; });
-      const sorted = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
-      const total = watches.length;
-      setTopBrands(sorted.map(([brand, count]) => ({
-        brand,
-        count,
-        share: `${Math.round((count / total) * 100)}% Share`,
-        imageSrc: brandImages[brand]?.src || brandImages['Rolex'].src,
-        imageAlt: brandImages[brand]?.alt || 'Watch image',
-      })));
+        setMetrics({ inventoryValue, totalSales: completedSales, monthlyRevenue: monthlyRev, vipCount });
 
-      // Low stock — brands with fewer than 3 in-stock units
-      const brandStock: Record<string, { count: number; image: string }> = {};
-      watches.filter(w => w.status === 'in_stock').forEach(w => {
-        if (!brandStock[w.model]) brandStock[w.model] = { count: 0, image: w.image_url || '' };
-        brandStock[w.model].count++;
-      });
-      setLowStock(Object.entries(brandStock)
-        .filter(([, v]) => v.count <= 2)
-        .slice(0, 3)
-        .map(([name, v]) => ({ name, unitsLeft: v.count, imageSrc: v.image, imageAlt: name })));
+        // Brand shares — top 3
+        const brandCounts: Record<string, number> = {};
+        watches.forEach(w => { brandCounts[w.brand] = (brandCounts[w.brand] || 0) + 1; });
+        const sorted = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const total = watches.length;
+        setTopBrands(sorted.map(([brand, count]) => ({
+          brand,
+          count,
+          share: `${Math.round((count / total) * 100)}% Share`,
+          imageSrc: brandImages[brand]?.src || brandImages['Rolex'].src,
+          imageAlt: brandImages[brand]?.alt || 'Watch image',
+        })));
+
+        // Low stock — brands with fewer than 3 in-stock units
+        const brandStock: Record<string, { count: number; image: string }> = {};
+        watches.filter(w => w.status === 'in_stock').forEach(w => {
+          if (!brandStock[w.model]) brandStock[w.model] = { count: 0, image: w.image_url || '' };
+          brandStock[w.model].count++;
+        });
+        setLowStock(Object.entries(brandStock)
+          .filter(([, v]) => v.count <= 2)
+          .slice(0, 3)
+          .map(([name, v]) => ({ name, unitsLeft: v.count, imageSrc: v.image, imageAlt: name })));
+      }
+
+      if (activityData) {
+        setActivities(activityData.map(a => {
+          const timeAgo = getTimeAgo(new Date(a.created_at));
+          const parts = (a.description || '').split(' — ');
+          return {
+            icon: a.icon || 'info',
+            title: a.title,
+            subtitlePre: parts[0] || '',
+            subtitleBold: '',
+            value: parts[1] || '',
+            timeAgo,
+          };
+        }));
+      }
+
+      setLoading(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load dashboard data';
+      console.error('Dashboard fetch error:', err);
+      setError(message);
+      setLoading(false);
     }
-
-    if (activityData) {
-      setActivities(activityData.map(a => {
-        const timeAgo = getTimeAgo(new Date(a.created_at));
-        const parts = (a.description || '').split(' — ');
-        return {
-          icon: a.icon || 'info',
-          title: a.title,
-          subtitlePre: parts[0] || '',
-          subtitleBold: '',
-          value: parts[1] || '',
-          timeAgo,
-        };
-      }));
-    }
-
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -109,13 +122,23 @@ export default function Dashboard() {
 
     // Real-time subscription
     const supabase = createClient();
+    let mounted = true;
     const channel = supabase.channel('dashboard-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'watches' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_log' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'watches' }, () => {
+        if (mounted) fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => {
+        if (mounted) fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_log' }, () => {
+        if (mounted) fetchData();
+      })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
   }, [fetchData]);
 
   const formatCurrency = (val: number) => {
@@ -130,6 +153,23 @@ export default function Dashboard() {
         <Sidebar />
         <main className="md:ml-64 min-h-screen flex items-center justify-center">
           <p className="label-engraved text-outline animate-pulse">Loading Portfolio...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Sidebar />
+        <main className="md:ml-64 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 font-body mb-4">Error loading dashboard</p>
+            <p className="text-[#737373] text-sm mb-6">{error}</p>
+            <button onClick={() => { setLoading(true); fetchData(); }} className="bg-[#000] text-white px-4 py-2 rounded text-sm hover:bg-[#2d2d2d]">
+              Retry
+            </button>
+          </div>
         </main>
       </>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -9,18 +9,29 @@ interface Watch { id: string; brand: string; model: string; reference_number: st
 export default function CollectionsPage() {
   const [watches, setWatches] = useState<Watch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [movementFilter, setMovementFilter] = useState('all');
   const [conditionFilter, setConditionFilter] = useState('all');
 
-  useEffect(() => {
-    const fetchWatches = async () => {
+  const fetchWatches = useCallback(async () => {
+    try {
+      setError(null);
       const supabase = createClient();
-      const { data } = await supabase.from('watches').select('*').eq('status', 'in_stock').order('price', { ascending: false });
+      const { data, error: err } = await supabase.from('watches').select('*').eq('status', 'in_stock').order('price', { ascending: false });
+      if (err) throw err;
       if (data) setWatches(data as Watch[]);
       setLoading(false);
-    };
-    fetchWatches();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load collections';
+      console.error('Fetch watches error:', err);
+      setError(msg);
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchWatches();
+  }, [fetchWatches]);
 
   const filtered = watches.filter(w => {
     const matchesMovement = movementFilter === 'all' || w.movement === movementFilter;
@@ -85,6 +96,14 @@ export default function CollectionsPage() {
 
           {loading ? (
             <p className="label-engraved text-outline animate-pulse">Loading Collection...</p>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500 font-body mb-4">Error loading collection</p>
+              <p className="text-[#737373] text-sm mb-6">{error}</p>
+              <button onClick={() => { setLoading(true); fetchWatches(); }} className="bg-[#000] text-white px-4 py-2 rounded text-sm hover:bg-[#2d2d2d]">
+                Retry
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filtered.map(w => (

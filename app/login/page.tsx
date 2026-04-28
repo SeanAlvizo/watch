@@ -92,7 +92,7 @@ export default function LoginPage() {
               className="w-full border-0 border-b border-[#e3e2e1] focus:ring-0 focus:border-primary px-0 py-2 text-sm placeholder:text-[#c4c7c7] transition-all bg-transparent"
               placeholder="••••••••"
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
 

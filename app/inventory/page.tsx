@@ -38,65 +38,152 @@ export default function InventoryPage() {
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const supabase = createClient();
 
   const fetchWatches = useCallback(async () => {
-    const { data } = await supabase.from('watches').select('*').order('created_at', { ascending: false });
-    if (data) setWatches(data as Watch[]);
-    setLoading(false);
-  }, []);
+    try {
+      setError(null);
+      const { data, error: err } = await supabase.from('watches').select('*').order('created_at', { ascending: false });
+      if (err) throw err;
+      if (data) setWatches(data as Watch[]);
+      setLoading(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch watches';
+      console.error('Fetch watches error:', err);
+      setError(msg);
+      setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     fetchWatches();
+    let mounted = true;
     const channel = supabase.channel('inventory-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'watches' }, () => fetchWatches())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'watches' }, () => {
+        if (mounted) fetchWatches();
+      })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchWatches]);
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [fetchWatches, supabase]);
 
-  const openAdd = () => { setEditingWatch(null); setFormData(emptyWatch); setImageFile(null); setImagePreview(''); setShowModal(true); };
-  const openEdit = (w: Watch) => { setEditingWatch(w); setFormData({ brand: w.brand, model: w.model, reference_number: w.reference_number || '', serial_number: w.serial_number || '', year: w.year || 2024, condition: w.condition || 'unworn', movement: w.movement || 'automatic', case_size: w.case_size || '', material: w.material || '', price: w.price, cost_basis: w.cost_basis || 0, status: w.status, image_url: w.image_url || '', notes: w.notes || '' }); setImageFile(null); setImagePreview(w.image_url || ''); setShowModal(true); };
+  const openAdd = () => { setEditingWatch(null); setFormData(emptyWatch); setImageFile(null); setImagePreview(''); setValidationError(null); setShowModal(true); };
+  const openEdit = (w: Watch) => { setEditingWatch(w); setFormData({ brand: w.brand, model: w.model, reference_number: w.reference_number || '', serial_number: w.serial_number || '', year: w.year || 2024, condition: w.condition || 'unworn', movement: w.movement || 'automatic', case_size: w.case_size || '', material: w.material || '', price: w.price, cost_basis: w.cost_basis || 0, status: w.status, image_url: w.image_url || '', notes: w.notes || '' }); setImageFile(null); setImagePreview(w.image_url || ''); setValidationError(null); setShowModal(true); };
 
   const handleImageSelect = (file: File) => {
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      setValidationError('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      setValidationError('Image must be smaller than 5MB');
+      return;
+    }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+    setValidationError(null);
   };
 
   const uploadImage = async (): Promise<string> => {
     if (!imageFile) return formData.image_url;
-    const ext = imageFile.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
-    const { error } = await supabase.storage.from('watch-images').upload(fileName, imageFile, { cacheControl: '3600', upsert: false });
-    if (error) { console.error('Upload error:', error); return formData.image_url; }
-    const { data: urlData } = supabase.storage.from('watch-images').getPublicUrl(fileName);
-    return urlData.publicUrl;
+    try {
+      const ext = imageFile.name.split('.').pop()?.toLowerCase();
+      if (!ext || !['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+        throw new Error('Invalid image format');
+      }
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('watch-images').upload(fileName, imageFile, { cacheControl: '3600', upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('watch-images').getPublicUrl(fileName);
+      return urlData.publicUrl;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Image upload failed';
+      console.error('Image upload error:', err);
+      setValidationError(`Image upload failed: ${msg}`);
+      return formData.image_url;
+    }
+  };
+
+  const validateForm = (): boolean => {
+    if (!formData.brand?.trim()) {
+      setValidationError('Brand is required');
+      return false;
+    }
+    if (!formData.model?.trim()) {
+      setValidationError('Model is required');
+      return false;
+    }
+    if (formData.price < 0) {
+      setValidationError('Price cannot be negative');
+      return false;
+    }
+    if (formData.cost_basis < 0) {
+      setValidationError('Cost basis cannot be negative');
+      return false;
+    }
+    if (formData.year < 1900 || formData.year > new Date().getFullYear() + 5) {
+      setValidationError('Year must be valid');
+      return false;
+    }
+    setValidationError(null);
+    return true;
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    const imageUrl = await uploadImage();
-    const saveData = { ...formData, image_url: imageUrl };
-    if (editingWatch?.id) {
-      await supabase.from('watches').update({ ...saveData, updated_at: new Date().toISOString() }).eq('id', editingWatch.id);
-      await supabase.from('activity_log').insert({ type: 'inventory', icon: 'edit', title: `${formData.brand} ${formData.model}`, description: `Updated — ${formData.status.replace('_', ' ')}` });
-    } else {
-      await supabase.from('watches').insert(saveData);
-      await supabase.from('activity_log').insert({ type: 'inventory', icon: 'inventory_2', title: `${formData.brand} ${formData.model}`, description: `Added to inventory — REF ${formData.reference_number}` });
+    if (!validateForm()) return;
+    
+    try {
+      setSaving(true);
+      setValidationError(null);
+      const imageUrl = await uploadImage();
+      const saveData = { ...formData, image_url: imageUrl };
+      
+      if (editingWatch?.id) {
+        const { error: updateError } = await supabase.from('watches').update({ ...saveData, updated_at: new Date().toISOString() }).eq('id', editingWatch.id);
+        if (updateError) throw updateError;
+        const { error: actError } = await supabase.from('activity_log').insert({ type: 'inventory', icon: 'edit', title: `${formData.brand} ${formData.model}`, description: `Updated — ${formData.status.replace('_', ' ')}` });
+        if (actError) console.warn('Activity log error:', actError);
+      } else {
+        const { error: insertError } = await supabase.from('watches').insert(saveData);
+        if (insertError) throw insertError;
+        const { error: actError } = await supabase.from('activity_log').insert({ type: 'inventory', icon: 'inventory_2', title: `${formData.brand} ${formData.model}`, description: `Added to inventory — REF ${formData.reference_number}` });
+        if (actError) console.warn('Activity log error:', actError);
+      }
+      setSaving(false);
+      setShowModal(false);
+      setImageFile(null);
+      setImagePreview('');
+      fetchWatches();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save watch';
+      console.error('Save watch error:', err);
+      setValidationError(msg);
+      setSaving(false);
     }
-    setSaving(false);
-    setShowModal(false);
-    setImageFile(null);
-    setImagePreview('');
-    fetchWatches();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Remove this timepiece from inventory?')) return;
-    const w = watches.find(x => x.id === id);
-    await supabase.from('watches').delete().eq('id', id);
-    if (w) await supabase.from('activity_log').insert({ type: 'inventory', icon: 'delete', title: `${w.brand} ${w.model}`, description: `Removed from inventory` });
-    fetchWatches();
+    try {
+      const w = watches.find(x => x.id === id);
+      const { error: deleteError } = await supabase.from('watches').delete().eq('id', id);
+      if (deleteError) throw deleteError;
+      if (w) {
+        const { error: actError } = await supabase.from('activity_log').insert({ type: 'inventory', icon: 'delete', title: `${w.brand} ${w.model}`, description: `Removed from inventory` });
+        if (actError) console.warn('Activity log error:', actError);
+      }
+      fetchWatches();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete watch';
+      console.error('Delete watch error:', err);
+      setError(msg);
+    }
   };
 
   const formatPrice = (val: number) => `₱${val.toLocaleString()}`;
@@ -110,6 +197,23 @@ export default function InventoryPage() {
   });
 
   if (loading) return (<><Sidebar /><main className="md:ml-64 min-h-screen flex items-center justify-center"><p className="label-engraved text-outline animate-pulse">Loading Inventory...</p></main></>);
+
+  if (error) {
+    return (
+      <>
+        <Sidebar />
+        <main className="md:ml-64 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 font-body mb-4">Error loading inventory</p>
+            <p className="text-[#737373] text-sm mb-6">{error}</p>
+            <button onClick={() => { setLoading(true); fetchWatches(); }} className="bg-[#000] text-white px-4 py-2 rounded text-sm hover:bg-[#2d2d2d]">
+              Retry
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -176,6 +280,12 @@ export default function InventoryPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8" onClick={e => e.stopPropagation()}>
             <h2 className="font-headline text-xl font-bold mb-6">{editingWatch ? 'Edit Timepiece' : 'New Timepiece'}</h2>
+            
+            {validationError && (
+              <div className="mb-6 bg-[#fcebea] border border-[#fac8c8] text-[#db5a5a] px-4 py-3 rounded-[4px] text-[12px] font-body">
+                {validationError}
+              </div>
+            )}
             {/* Image Upload */}
             <div className="mb-6">
               <label className="block font-label text-[10px] font-bold tracking-widest uppercase text-[#737373] mb-2">Watch Image</label>

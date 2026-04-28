@@ -23,26 +23,39 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-  // Protected routes — redirect to login if not authenticated
-  const protectedRoutes = ['/dashboard', '/inventory', '/customers', '/sales', '/reports', '/settings'];
-  const isProtected = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route));
+    if (authError && authError.status !== 400) {
+      console.error('Auth middleware error:', authError);
+      // Allow request to proceed, let client-side handle auth
+      return supabaseResponse;
+    }
 
-  if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+    // Protected routes — redirect to login if not authenticated
+    const protectedRoutes = ['/dashboard', '/inventory', '/customers', '/sales', '/reports', '/settings'];
+    const isProtected = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route));
+
+    if (isProtected && !user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
+
+    // If logged in and trying to access login, redirect to dashboard
+    if (request.nextUrl.pathname === '/login' && user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
+  } catch (error) {
+    console.error('Middleware exception:', error);
+    // On error, allow request to proceed
+    return supabaseResponse;
   }
-
-  // If logged in and trying to access login, redirect to dashboard
-  if (request.nextUrl.pathname === '/login' && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
-  }
-
-  return supabaseResponse;
 }
